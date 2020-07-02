@@ -1,8 +1,17 @@
 #include "daisy_patch.h"
 #include <string>
 #include <random>
+#include <cstring>
+
+#define BUFF_SIZE 16
 
 using namespace daisy;
+
+static uint32_t DSY_QSPI_BSS buff[BUFF_SIZE];
+static uint32_t __attribute__((section(".dtcmram_bss"))) outbuff[BUFF_SIZE];
+//static uint32_t  axi_outbuff[BUFF_SIZE];
+uint32_t inbuff[BUFF_SIZE];
+
 
 DaisyPatch patch;
 int selected;
@@ -54,6 +63,34 @@ public:
 
 Applet applets[4];
 
+void writeModes() {
+	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_INDIRECT_POLLING;
+	dsy_qspi_init(&patch.seed.qspi_handle);
+	for (int i = 0; i < 4; i++) {
+		inbuff[i] = (uint32_t) applets[i].app;
+	}
+	uint32_t base = 0x90000000;
+	uint32_t writesize = BUFF_SIZE * sizeof(buff[0]);
+	dsy_qspi_erase(base, base + writesize);
+	dsy_qspi_write(base, writesize, (uint8_t*)inbuff);
+	dsy_qspi_deinit();
+}
+
+void readModes() {
+	// init memory?
+	//patch.seed.qspi_handle.mode = DSY_QSPI_MODE_INDIRECT_POLLING;
+	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_DSY_MEMORY_MAPPED;
+	dsy_qspi_init(&patch.seed.qspi_handle);
+
+	//uint32_t base = 0x90000000;
+	//memcpy(outbuff, buff, sizeof(buff[0]) * BUFF_SIZE);
+	//dsy_qspi_init(&patch.seed.qspi_handle);
+	for (int i = 0; i < 4; i++) {
+		applets[i].app = (App) buff[i];
+	}
+	dsy_qspi_deinit();
+}
+
 // AUDIO PROCESSOR
 static void AudioThrough(float **in, float **out, size_t size) {
 	// just pass along the values
@@ -80,6 +117,10 @@ static void AudioThrough(float **in, float **out, size_t size) {
 	}
 	
 	if (patch.encoder.Pressed()) {
+		// save?
+		if (patch.encoder.TimeHeldMs() > 2000.0f && patch.encoder.TimeHeldMs() < 2010.0f) {
+			writeModes();
+		}
 		// encoder
 		selected = (selected + patch.encoder.Increment()) % 4;
 		if (selected < 0) {
@@ -96,6 +137,8 @@ static void AudioThrough(float **in, float **out, size_t size) {
 		applets[selected].app = (App) a;
 	}
 }
+
+
 
 void UpdateOled() {
 	patch.display.Fill(false);
@@ -125,7 +168,7 @@ int main(void) {
 		applets[i].position = i;
 	}
 
-	//patch.ChangeAudioCallback(AudioThrough);
+	readModes();
 	
 	while(1) {
 		UpdateOled();
