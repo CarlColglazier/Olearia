@@ -32,16 +32,65 @@ void writeString(int x, int y, std::string s) {
 class Generator {
 public:
 	virtual void Init(float sample_rate) = 0;
-	virtual float Process() = 0;
+	virtual void Control(float f) = 0;
+	virtual float Process(float f) = 0;
 };
 
 class Noise: public Generator {
 public:
 	void Init(float sample_rate) {
+		amp_ = 1.0;
 	}
-	float Process() {
-		return rand() / (RAND_MAX + 1.);
+	void Control(float in) {
+		amp_ = in;
 	}
+	float Process(float in) {
+		return (rand() / (RAND_MAX + 1.)) * amp_;
+	}
+private:
+	float amp_;
+};
+
+// Biquad filter taken from https://github.com/dimtass/DSP-Cpp-filters.
+class LPFilter: public Generator {
+public:
+	void Init(float s_r) {
+		sample_rate_ = s_r;
+		cutoff = 440.0f;
+		m_xnz1 = 0;
+		m_xnz2 = 0;
+		m_ynz1 = 0;
+		m_ynz2 = 0;
+		m_offset = 0;
+		calc_cutoffs(cutoff);
+	}
+	void Control(float in) {
+		cutoff = in * 20000.0f;
+		calc_cutoffs(cutoff);
+	}
+	float Process(float in) {
+		float xn = in;
+		float yn = a0*xn + a1*m_xnz1 + a2*m_xnz2 - b1*m_ynz1 - b2*m_ynz2;
+		m_xnz2 = m_xnz1;
+		m_xnz1 = xn;
+		m_ynz2 = m_ynz1;
+		m_ynz1 = yn;
+		return(yn + m_offset);
+	}
+private:
+	void calc_cutoffs(float cut) {
+		float th = 2.0 * 3.141592 * cut / sample_rate_;
+		float g = cosf(th) / (1.0 + sinf(th));
+		a0 = (1.0 - g) / 2.0;
+		a1 = (1.0 - g) / 2.0;
+		a2 = 0.0;
+		b1 = -g;
+		b2 = 0.0;
+	}
+	float cutoff;
+	float a0, a1, a2, b1, b2, c0, d0;
+	float m_xnz1, m_xnz2, m_ynz1, m_ynz2, m_offset;
+	float sample_rate_;
 };
 
 // just a sine wave for now.
@@ -49,11 +98,16 @@ public:
 class Osc: public Generator {
 public:
 	void Init(float sample_rate) {
-		freq_ = 220.0f;
+		freq_ = 440.0f;
 		phase_ = 0.0f;
 		phase_inc_ = CalcPhaseInc(freq_);
+		sr_ = (1.0f / sample_rate);
 	};
-	float Process() {
+	void Control(float in) {
+		freq_ = (16.352 * 4) * powf(2.0, in * 5);
+		phase_inc_ = CalcPhaseInc(freq_);
+	}
+	float Process(float in) {
 		float out;
 		out = sinf(phase_);
 		phase_ += phase_inc_;
@@ -66,8 +120,9 @@ private:
 	float freq_;
 	float phase_;
 	float phase_inc_;
+	float sr_;
 	float CalcPhaseInc(float f) {
-		return (TWO_PI_F * f) * (1.0f / sample_rate);
+		return (TWO_PI_F * f) * sr_;
 	}
 };
 
@@ -75,6 +130,7 @@ enum App {
 					VCA,
 					VCO,
 					NOISE,
+					VCF,
 					NUM_ITEMS
 };
 
@@ -98,7 +154,12 @@ public:
 		case App::NOISE:
 			gen = new Noise();
 			break;
+		case App::VCF:
+			gen = new LPFilter();
+			break;
 		default:
+			gen = new Osc();
+			gen->Init(sample_rate);
 			return;
 			//gen = new Osc();
 			break;
@@ -124,6 +185,9 @@ public:
 		case NOISE:
 			writeString(position * draw_width, 20, "NS");
 			break;
+		case VCF:
+			writeString(position * draw_width, 20, "VCF");
+			break;
 		default:
 			break;
 		}
@@ -131,9 +195,9 @@ public:
 };
 
 
-
 Applet applets[4];
 
+/* persist settings */
 void writeModes() {
 	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_INDIRECT_POLLING;
 	dsy_qspi_init(&patch.seed.qspi_handle);
@@ -169,11 +233,12 @@ static void AudioThrough(float **in, float **out, size_t size) {
 
 	// audio stuff here
 	for (int a = 0; a < 4; a++) {
+		applets[a].gen->Control(controls[a]);
 		for (size_t i = 0; i < size; i++) {
 			if (applets[a].app == App::VCA) {
 				out[a][i] = in[a][i] * controls[a];
 			} else {
-				out[a][i] = applets[a].gen->Process();
+				out[a][i] = applets[a].gen->Process(in[a][i]);
 			}
 		}
 	}
