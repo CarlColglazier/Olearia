@@ -2,19 +2,24 @@
 #include <string>
 #include <random>
 #include <cstring>
+#include <math.h>
 
 #define BUFF_SIZE 16
+
+constexpr float TWO_PI_F     = (float)M_TWOPI;
+constexpr float TWO_PI_RECIP = 1.0f / TWO_PI_F;
 
 using namespace daisy;
 
 static uint32_t DSY_QSPI_BSS buff[BUFF_SIZE];
-static uint32_t __attribute__((section(".dtcmram_bss"))) outbuff[BUFF_SIZE];
+//static uint32_t __attribute__((section(".dtcmram_bss"))) outbuff[BUFF_SIZE];
 //static uint32_t  axi_outbuff[BUFF_SIZE];
 uint32_t inbuff[BUFF_SIZE];
 
 
 DaisyPatch patch;
 int selected;
+float sample_rate;
 
 const int SCREEN_WIDTH = 128;
 
@@ -24,8 +29,51 @@ void writeString(int x, int y, std::string s) {
 	patch.display.WriteString(cstr, Font_7x10, true);
 }
 
+class Generator {
+public:
+	virtual void Init(float sample_rate) = 0;
+	virtual float Process() = 0;
+};
+
+class Noise: public Generator {
+public:
+	void Init(float sample_rate) {
+	}
+	float Process() {
+		return rand() / (RAND_MAX + 1.);
+	}
+};
+
+// just a sine wave for now.
+// a lot of the design here is taken from DaisySP
+class Osc: public Generator {
+public:
+	void Init(float sample_rate) {
+		freq_ = 220.0f;
+		phase_ = 0.0f;
+		phase_inc_ = CalcPhaseInc(freq_);
+	};
+	float Process() {
+		float out;
+		out = sinf(phase_);
+		phase_ += phase_inc_;
+		if (phase_ > TWO_PI_F) {
+			phase_ -= TWO_PI_F;
+		}
+		return out;
+	};
+private:
+	float freq_;
+	float phase_;
+	float phase_inc_;
+	float CalcPhaseInc(float f) {
+		return (TWO_PI_F * f) * (1.0f / sample_rate);
+	}
+};
+
 enum App {
 					VCA,
+					VCO,
 					NOISE,
 					NUM_ITEMS
 };
@@ -34,10 +82,28 @@ class Applet {
 public:
 	int position;
 	App app;
+	Generator *gen;
 	//Applet(int position);
 	Applet() {
 		position = 0;
 		app = App::VCA;
+		Init();
+	}
+
+	void Init() {
+		switch (app) {
+		case App::VCO:
+			gen = new Osc();
+			break;
+		case App::NOISE:
+			gen = new Noise();
+			break;
+		default:
+			return;
+			//gen = new Osc();
+			break;
+		}
+		gen->Init(sample_rate);
 	}
 	
 	void draw() {
@@ -52,14 +118,19 @@ public:
 		case VCA:
 			writeString(position * draw_width, 20, "VCA");
 			break;
+		case VCO:
+			writeString(position * draw_width, 20, "VCO");
+			break;
 		case NOISE:
-			writeString(position * draw_width, 20, "NOISE");
+			writeString(position * draw_width, 20, "NS");
 			break;
 		default:
 			break;
 		}
 	}
 };
+
+
 
 Applet applets[4];
 
@@ -77,14 +148,8 @@ void writeModes() {
 }
 
 void readModes() {
-	// init memory?
-	//patch.seed.qspi_handle.mode = DSY_QSPI_MODE_INDIRECT_POLLING;
 	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_DSY_MEMORY_MAPPED;
 	dsy_qspi_init(&patch.seed.qspi_handle);
-
-	//uint32_t base = 0x90000000;
-	//memcpy(outbuff, buff, sizeof(buff[0]) * BUFF_SIZE);
-	//dsy_qspi_init(&patch.seed.qspi_handle);
 	for (int i = 0; i < 4; i++) {
 		applets[i].app = (App) buff[i];
 	}
@@ -105,13 +170,10 @@ static void AudioThrough(float **in, float **out, size_t size) {
 	// audio stuff here
 	for (int a = 0; a < 4; a++) {
 		for (size_t i = 0; i < size; i++) {
-			switch(applets[a].app) {
-			case App::VCA:
+			if (applets[a].app == App::VCA) {
 				out[a][i] = in[a][i] * controls[a];
-				break;
-			default:
-				out[a][i] = rand() / (RAND_MAX + 1.);
-				break;
+			} else {
+				out[a][i] = applets[a].gen->Process();
 			}
 		}
 	}
@@ -134,11 +196,13 @@ static void AudioThrough(float **in, float **out, size_t size) {
 		if (a >= App::NUM_ITEMS) {
 			a = 0;
 		}
-		applets[selected].app = (App) a;
+		// switch?
+		if (applets[selected].app != (App) a) {
+			applets[selected].app = (App) a;
+			applets[selected].Init();
+		}
 	}
 }
-
-
 
 void UpdateOled() {
 	patch.display.Fill(false);
@@ -162,13 +226,17 @@ int main(void) {
 	patch.StartAdc();
 	patch.StartAudio(AudioThrough);
 
+	sample_rate = patch.seed.AudioSampleRate();
+
 	selected = 0;
 	// init applets
 	for (int i = 0; i < 4; i++) {
 		applets[i].position = i;
+		//applets[i].Init();
 	}
 
-	readModes();
+	// load settings
+	//readModes();
 	
 	while(1) {
 		UpdateOled();
