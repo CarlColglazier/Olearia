@@ -8,14 +8,13 @@
 #include "Generator.hpp"
 #endif
 
+// import generators
+#include "Amp.hpp"
 #include "Osc.hpp"
 #include "Noise.hpp"
 #include "LPFilter.hpp"
 
 #define BUFF_SIZE 16
-
-//constexpr float TWO_PI_F     = (float)M_TWOPI;
-//constexpr float TWO_PI_RECIP = 1.0f / TWO_PI_F;
 
 using namespace daisy;
 
@@ -58,6 +57,9 @@ public:
 
 	void Init() {
 		switch (app) {
+		case App::VCA:
+			gen = new Amp();
+			break;
 		case App::VCO:
 			gen = new Osc();
 			break;
@@ -68,10 +70,7 @@ public:
 			gen = new LPFilter();
 			break;
 		default:
-			gen = new Osc();
-			gen->Init(sample_rate);
-			return;
-			//gen = new Osc();
+			gen = new Amp();
 			break;
 		}
 		gen->Init(sample_rate);
@@ -145,11 +144,7 @@ static void AudioThrough(float **in, float **out, size_t size) {
 	for (int a = 0; a < 4; a++) {
 		applets[a].gen->Control(controls[a]);
 		for (size_t i = 0; i < size; i++) {
-			if (applets[a].app == App::VCA) {
-				out[a][i] = in[a][i] * controls[a];
-			} else {
-				out[a][i] = applets[a].gen->Process(in[a][i]);
-			}
+			out[a][i] = applets[a].gen->Process(in[a][i]);
 		}
 	}
 	
