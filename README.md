@@ -1,10 +1,12 @@
 # Olearia
 
-Eventually: a collection of applets for the Daisy Patch.
+A collection of applets for the Daisy Patch.
 
-Now:
+| Mode  | Control | Audio In |
+|-------|---------|----------|
+| VCA   | Level   | Signal   |
+| VCO   | Pitch   | --       |
+| Noise | Level   | --       |
+| VCF   | Cutoff  | Signal   |
 
-- VCA
-- VCO
-- Noise
-- VCF
+All outputs direct through the audio outs.
