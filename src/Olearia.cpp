@@ -84,22 +84,9 @@ public:
 				patch.display.DrawPixel(x, 35, true);
 			}
 		}
-		switch(app) {
-		case VCA:
-			writeString(position * draw_width, 20, "VCA");
-			break;
-		case VCO:
-			writeString(position * draw_width, 20, "VCO");
-			break;
-		case NOISE:
-			writeString(position * draw_width, 20, "NS");
-			break;
-		case VCF:
-			writeString(position * draw_width, 20, "VCF");
-			break;
-		default:
-			break;
-		}
+		const char *names[App::NUM_ITEMS] =
+			{ "VCA", "VCO", "NOISE", "VCF" };
+		writeString(position * draw_width, 20, names[app]);
 	}
 };
 
@@ -168,6 +155,7 @@ static void AudioThrough(float **in, float **out, size_t size) {
 		}
 		// switch?
 		if (applets[selected].app != (App) a) {
+			delete applets[selected].gen;
 			applets[selected].app = (App) a;
 			applets[selected].Init();
 		}
