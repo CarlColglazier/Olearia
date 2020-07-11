@@ -1,4 +1,4 @@
-#include "Amp.hpp"
+#include "GenAmp.hpp"
 
 void Amp::Init(float sample_rate) {
 	// do nothing here.

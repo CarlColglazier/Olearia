@@ -1,4 +1,4 @@
-#include "LPFilter.hpp"
+#include "GenLPFilter.hpp"
 
 void LPFilter::Init(float s_r) {
 	sample_rate_ = s_r;

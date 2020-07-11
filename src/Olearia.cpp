@@ -9,10 +9,10 @@
 #endif
 
 // import generators
-#include "Amp.hpp"
-#include "Osc.hpp"
-#include "Noise.hpp"
-#include "LPFilter.hpp"
+#include "GenAmp.hpp"
+#include "GenOsc.hpp"
+#include "GenNoise.hpp"
+#include "GenLPFilter.hpp"
 
 #define BUFF_SIZE 16
 

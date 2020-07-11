@@ -1,4 +1,4 @@
-#include "Noise.hpp"
+#include "GenNoise.hpp"
 
 void Noise::Init(float sample_rate) {
 	amp_ = 1.0;

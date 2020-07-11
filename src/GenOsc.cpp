@@ -1,4 +1,4 @@
-#include "Osc.hpp"
+#include "GenOsc.hpp"
 
 void Osc::Init (float sample_rate) {
 		freq_ = 440.0f;
