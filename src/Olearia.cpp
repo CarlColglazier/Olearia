@@ -180,6 +180,9 @@ void UpdateOled() {
 
 int main(void) {
 	patch.Init();
+
+	// set audio block size
+	patch.SetAudioBlockSize(1);
 	
 	patch.StartAdc();
 	patch.StartAudio(AudioThrough);
