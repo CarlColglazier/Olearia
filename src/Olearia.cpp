@@ -33,7 +33,7 @@ const int SCREEN_WIDTH = 128;
 void writeString(int x, int y, std::string s) {
 	patch.display.SetCursor(x, y);
 	char* cstr = &s[0];
-	patch.display.WriteString(cstr, Font_7x10, true);
+	patch.display.WriteString(cstr, Font_6x8, true);
 }
 
 enum App {
@@ -81,12 +81,12 @@ public:
 
 		if (selected == position) {
 			for (int x = position * draw_width; x < (position + 1) * draw_width; x++) {
-				patch.display.DrawPixel(x, 35, true);
+				patch.display.DrawPixel(x, 30, true);
 			}
 		}
 		const char *names[App::NUM_ITEMS] =
 			{ "VCA", "VCO", "NOISE", "VCF" };
-		writeString(position * draw_width, 20, names[app]);
+		writeString(position * draw_width, 18, names[app]);
 	}
 };
 
@@ -168,7 +168,7 @@ void UpdateOled() {
 	writeString(0, 0, "olearia");
 
 	for (int i = 0; i < 128; i++) {
-		patch.display.DrawPixel(i, 15, true);
+		patch.display.DrawPixel(i, 10, true);
 	}
 
 	for (int i = 0; i < 4; i++) {
