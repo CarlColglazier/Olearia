@@ -21,3 +21,8 @@ jobs:
       run: make daisy
     - name: make
       run: make
+    - name: Archive
+      uses: actions/upload-artifact@v1
+      with:
+        name: olearia.bin
+        path: build/olearia.bin
