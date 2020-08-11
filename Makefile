@@ -2,7 +2,7 @@ TARGET = olearia
 
 CPP_SOURCES = src/Olearia.cpp src/GenAmp.cpp src/GenOsc.cpp src/GenNoise.cpp src/GenLPFilter.cpp
 
-LIBDAISY_DIR = ./libDaisy
+LIBDAISY_DIR = ./lib/libDaisy
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 
 include $(SYSTEM_FILES_DIR)/Makefile
