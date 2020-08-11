@@ -27,6 +27,7 @@ uint32_t inbuff[BUFF_SIZE];
 DaisyPatch patch;
 int selected;
 float sample_rate;
+float controls[4];
 
 const int SCREEN_WIDTH = 128;
 
@@ -116,25 +117,15 @@ void readModes() {
 	dsy_qspi_deinit();
 }
 
-// AUDIO PROCESSOR
-static void AudioThrough(float **in, float **out, size_t size) {
+void UpdateControls() {
 	// just pass along the values
 	patch.UpdateAnalogControls();
 	patch.DebounceControls();
 
-	float controls[4];
 	for (int i = 0; i < 4; i++) {
 		controls[i] = patch.controls[i].Process();
 	}
 
-	// audio stuff here
-	for (int a = 0; a < 4; a++) {
-		applets[a].gen->Control(controls[a]);
-		for (size_t i = 0; i < size; i++) {
-			out[a][i] = applets[a].gen->Process(in[a][i]);
-		}
-	}
-	
 	if (patch.encoder.Pressed()) {
 		// save?
 		if (patch.encoder.TimeHeldMs() > 2000.0f && patch.encoder.TimeHeldMs() < 2010.0f) {
@@ -158,6 +149,17 @@ static void AudioThrough(float **in, float **out, size_t size) {
 			delete applets[selected].gen;
 			applets[selected].app = (App) a;
 			applets[selected].Init();
+		}
+	}
+}
+
+// AUDIO PROCESSOR
+static void AudioThrough(float **in, float **out, size_t size) {
+	// audio stuff here
+	for (int a = 0; a < 4; a++) {
+		applets[a].gen->Control(controls[a]);
+		for (size_t i = 0; i < size; i++) {
+			out[a][i] = applets[a].gen->Process(in[a][i]);
 		}
 	}
 }
@@ -200,6 +202,7 @@ int main(void) {
 	//readModes();
 	
 	while(1) {
+		UpdateControls();
 		UpdateOled();
 	}
 }
