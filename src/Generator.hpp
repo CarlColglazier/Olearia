@@ -11,13 +11,6 @@ public:
 		phase_ = 0.0f;
 	}
 	~Oscillator() {}
-	void Init(float sr) {
-		sr_ = sr;
-		sr_recip_ = 1.0f / sr;
-		freq_ = 440.0f;
-		amp_ = 0.5f;
-		phase_ = 0.0f;
-	}
 	inline void SetFreq(float f) {
 		freq_ = f;
 		phase_inc_ = CalcPhaseInc(f);

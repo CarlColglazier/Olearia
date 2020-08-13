@@ -33,35 +33,34 @@ void writeString(int x, int y, std::string s) {
 	patch.display.WriteString(cstr, Font_6x8, true);
 }
 
-enum App { VCA, VCO, NOISE, NUM_ITEMS };
+enum App { VCO, VCA, NOISE, NUM_ITEMS };
 
-class Applett {
+class AppHost {
 public:
 	int position;
 	App app;
 	Applet *gen;
-	Applett() {
+	AppHost() {
 		position = 0;
-		app = App::VCA;
-		Init();
+		app = App::VCO;
+		//Init();
 	}
 
-	void Init() {
+	void Init(float sample_rate) {
 		switch (app) {
 		case App::VCA:
-			gen = new Amp();
+			gen = new Amp(sample_rate);
 			break;
 		case App::VCO:
-			gen = new Osc();
+			gen = new Osc(sample_rate);
 			break;
 		case App::NOISE:
-			gen = new Noise();
+			gen = new Noise(sample_rate);
 			break;
 		default:
-			gen = new Amp();
+			gen = new Amp(sample_rate);
 			break;
 		}
-		gen->Init(sample_rate);
 	}
 
 	void draw() {
@@ -73,20 +72,19 @@ public:
 			}
 		}
 		const char *names[App::NUM_ITEMS] =
-			{ "VCA", "FM VCO", "NOISE" };
+			{ "FM VCO", "VCA", "NOISE" };
 		writeString(position * draw_width, 18, names[app]);
 	}
 };
 
-
-Applett applets[NUM_APPLETS];
+AppHost *apphost[NUM_APPLETS];
 
 /* persist settings */
 void writeModes() {
 	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_INDIRECT_POLLING;
 	dsy_qspi_init(&patch.seed.qspi_handle);
 	for (int i = 0; i < NUM_APPLETS; i++) {
-		inbuff[i] = (uint32_t) applets[i].app;
+		//inbuff[i] = (uint32_t) applets[i].app;
 	}
 	uint32_t base = 0x90000000;
 	uint32_t writesize = BUFF_SIZE * sizeof(buff[0]);
@@ -99,7 +97,7 @@ void readModes() {
 	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_DSY_MEMORY_MAPPED;
 	dsy_qspi_init(&patch.seed.qspi_handle);
 	for (int i = 0; i < NUM_APPLETS; i++) {
-		applets[i].app = (App) buff[i];
+		//applets[i].app = (App) buff[i];
 	}
 	dsy_qspi_deinit();
 }
@@ -125,18 +123,18 @@ void UpdateControls() {
 			selected = NUM_APPLETS + selected;
 		}
 	} else {
-		int a = applets[selected].app + patch.encoder.Increment();
+		int a = apphost[selected]->app + patch.encoder.Increment();
 		if (a < 0) {
-				a = App::NUM_ITEMS - 1;
+			a = App::NUM_ITEMS - 1;
 		}
 		if (a >= App::NUM_ITEMS) {
 			a = 0;
 		}
 		// switch?
-		if (applets[selected].app != (App) a) {
-			delete applets[selected].gen;
-			applets[selected].app = (App) a;
-			applets[selected].Init();
+		if (apphost[selected]->app != (App) a) {
+			delete apphost[selected]->gen;
+			apphost[selected]->app = (App) a;
+			apphost[selected]->Init(sample_rate);
 		}
 	}
 }
@@ -145,10 +143,10 @@ void UpdateControls() {
 static void AudioThrough(float **in, float **out, size_t size) {
 	// audio stuff here
 	for (int a = 0; a < NUM_APPLETS; a++) {
-		applets[a].gen->Control(controls[2 * a], controls[2 * a + 1]);
+		apphost[a]->gen->Control(controls[2 * a], controls[2 * a + 1]);
 		for (size_t i = 0; i < size; i++) {
 			float *o;
-			o = applets[a].gen->Process(in[2 * a][i], in[2 * a + 1][i]);
+			o = apphost[a]->gen->Process(in[2 * a][i], in[2 * a + 1][i]);
 			out[2 * a][i] = o[0];
 			out[2 * a + 1][i] = o[1];
 			//out[2 * a + 1][i] = applets[a].gen->Process();
@@ -163,7 +161,7 @@ void UpdateOled() {
 		patch.display.DrawPixel(i, 10, true);
 	}
 	for (int i = 0; i < NUM_APPLETS; i++) {
-		applets[i].draw();
+		apphost[i]->draw();
 	}
 	patch.display.Update();
 }
@@ -195,8 +193,9 @@ int main(void) {
 	selected = 0;
 	// init applets
 	for (int i = 0; i < NUM_APPLETS; i++) {
-		applets[i].position = i;
-		//applets[i].Init();
+		apphost[i] = new AppHost();
+		apphost[i]->position = i;
+		apphost[i]->Init(sample_rate);
 	}
 
 	// load settings

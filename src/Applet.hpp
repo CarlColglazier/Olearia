@@ -4,16 +4,14 @@
 
 class Applet {
 public:
-	virtual ~Applet() {
-	};
-	virtual void Init(float sample_rate) = 0;
+	virtual ~Applet() {};
 	virtual void Control(float f_l, float f_r) = 0;
 	virtual float* Process(float f_l, float f_r) = 0;
 };
 
 class Amp: public Applet {
 public:
-	void Init(float sample_rate);
+	Amp(float sample_rate);
 	void Control(float in_l, float in_r);
 	float* Process(float in, float in_r);
 private:
@@ -22,7 +20,7 @@ private:
 
 class Noise: public Applet {
 public:
-	void Init(float sample_rate);
+	Noise(float sample_rate);
 	void Control(float in_l, float in_r);
 	float* Process(float in_l, float in_r);
 private:
@@ -35,8 +33,8 @@ constexpr float TWO_PI_F = (float)M_TWOPI;
 // a lot of the design here is taken from DaisySP
 class Osc: public Applet {
 public:
+	Osc(float sample_rate);
 	~Osc();
-	void Init(float sample_rate);
 	void Control(float in_l, float in_r);
 	float* Process(float in_l, float in_r);
 private:

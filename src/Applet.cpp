@@ -2,7 +2,7 @@
 
 // AMP
 // ----------------------
-void Amp::Init(float sample_rate) {
+Amp::Amp(float sample_rate) {
 	amp_l = 0.0f;
 	amp_r = 0.0f;
 }
@@ -21,7 +21,7 @@ float* Amp::Process(float in_l, float in_r) {
 
 // NOISE
 // ----------------------
-void Noise::Init(float sample_rate) {
+Noise::Noise(float sample_rate) {
 	amp_ = 1.0;
 }
 
@@ -39,19 +39,17 @@ float* Noise::Process(float in_l, float in_r) {
 
 // OSC
 // ----------------------
-Osc::~Osc() {
-	delete osc_one;
-	delete osc_two;
-}
-
-void Osc::Init (float sample_rate) {
+Osc::Osc(float sample_rate) {
 	car_freq_ = 440.0f;
 	mod_freq_ = 110.0f;
 	mod_index_ = 100.0;
 	osc_one = new Oscillator(sample_rate);
 	osc_two = new Oscillator(sample_rate);
-	//osc_one->Init(sample_rate);
-	//osc_two->Init(sample_rate);
+}
+
+Osc::~Osc() {
+	delete osc_one;
+	delete osc_two;
 }
 
 float v_to_freq(float v) {
