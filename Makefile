@@ -1,6 +1,8 @@
 TARGET = olearia
 
-CPP_SOURCES = src/Olearia.cpp src/GenAmp.cpp src/GenOsc.cpp src/GenNoise.cpp src/GenLPFilter.cpp
+SRC_DIR=src
+
+CPP_SOURCES = $(wildcard $(SRC_DIR)/*cpp)
 
 LIBDAISY_DIR = ./lib/libDaisy
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
@@ -11,3 +13,5 @@ include $(SYSTEM_FILES_DIR)/Makefile
 daisy:
 	cd $(LIBDAISY_DIR)
 	make
+
+deploy: daisy build program

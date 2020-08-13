@@ -3,18 +3,13 @@
 #include <cstring>
 #include <math.h>
 // local includes
-#ifndef GENERATOR_
-#define GENERATOR_
-#include "Generator.hpp"
+#ifndef APPLET_
+#define APPLET_
+#include "Applet.hpp"
 #endif
 
-// import generators
-#include "GenAmp.hpp"
-#include "GenOsc.hpp"
-#include "GenNoise.hpp"
-#include "GenLPFilter.hpp"
-
 #define BUFF_SIZE 16
+#define NUM_APPLETS 2
 
 using namespace daisy;
 
@@ -28,6 +23,7 @@ DaisyPatch patch;
 int selected;
 float sample_rate;
 float controls[4];
+int last_chan;
 
 const int SCREEN_WIDTH = 128;
 
@@ -37,20 +33,14 @@ void writeString(int x, int y, std::string s) {
 	patch.display.WriteString(cstr, Font_6x8, true);
 }
 
-enum App {
-					VCA,
-					VCO,
-					NOISE,
-					VCF,
-					NUM_ITEMS
-};
+enum App { VCA, VCO, NOISE, NUM_ITEMS };
 
-class Applet {
+class Applett {
 public:
 	int position;
 	App app;
-	Generator *gen;
-	Applet() {
+	Applet *gen;
+	Applett() {
 		position = 0;
 		app = App::VCA;
 		Init();
@@ -67,18 +57,15 @@ public:
 		case App::NOISE:
 			gen = new Noise();
 			break;
-		case App::VCF:
-			gen = new LPFilter();
-			break;
 		default:
 			gen = new Amp();
 			break;
 		}
 		gen->Init(sample_rate);
 	}
-	
+
 	void draw() {
-		int draw_width = SCREEN_WIDTH / 4;
+		int draw_width = SCREEN_WIDTH / NUM_APPLETS;
 
 		if (selected == position) {
 			for (int x = position * draw_width; x < (position + 1) * draw_width; x++) {
@@ -86,19 +73,19 @@ public:
 			}
 		}
 		const char *names[App::NUM_ITEMS] =
-			{ "VCA", "VCO", "NOISE", "VCF" };
+			{ "VCA", "FM VCO", "NOISE" };
 		writeString(position * draw_width, 18, names[app]);
 	}
 };
 
 
-Applet applets[4];
+Applett applets[NUM_APPLETS];
 
 /* persist settings */
 void writeModes() {
 	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_INDIRECT_POLLING;
 	dsy_qspi_init(&patch.seed.qspi_handle);
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < NUM_APPLETS; i++) {
 		inbuff[i] = (uint32_t) applets[i].app;
 	}
 	uint32_t base = 0x90000000;
@@ -111,7 +98,7 @@ void writeModes() {
 void readModes() {
 	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_DSY_MEMORY_MAPPED;
 	dsy_qspi_init(&patch.seed.qspi_handle);
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < NUM_APPLETS; i++) {
 		applets[i].app = (App) buff[i];
 	}
 	dsy_qspi_deinit();
@@ -129,12 +116,13 @@ void UpdateControls() {
 	if (patch.encoder.Pressed()) {
 		// save?
 		if (patch.encoder.TimeHeldMs() > 2000.0f && patch.encoder.TimeHeldMs() < 2010.0f) {
-			writeModes();
+			//writeModes();
+			// disabled for now
 		}
 		// encoder
-		selected = (selected + patch.encoder.Increment()) % 4;
+		selected = (selected + patch.encoder.Increment()) % NUM_APPLETS;
 		if (selected < 0) {
-			selected = 4 + selected;
+			selected = NUM_APPLETS + selected;
 		}
 	} else {
 		int a = applets[selected].app + patch.encoder.Increment();
@@ -156,53 +144,67 @@ void UpdateControls() {
 // AUDIO PROCESSOR
 static void AudioThrough(float **in, float **out, size_t size) {
 	// audio stuff here
-	for (int a = 0; a < 4; a++) {
-		applets[a].gen->Control(controls[a]);
+	for (int a = 0; a < NUM_APPLETS; a++) {
+		applets[a].gen->Control(controls[2 * a], controls[2 * a + 1]);
 		for (size_t i = 0; i < size; i++) {
-			out[a][i] = applets[a].gen->Process(in[a][i]);
+			float *o;
+			o = applets[a].gen->Process(in[2 * a][i], in[2 * a + 1][i]);
+			out[2 * a][i] = o[0];
+			out[2 * a + 1][i] = o[1];
+			//out[2 * a + 1][i] = applets[a].gen->Process();
 		}
 	}
 }
 
 void UpdateOled() {
 	patch.display.Fill(false);
-
 	writeString(0, 0, "olearia");
-
 	for (int i = 0; i < 128; i++) {
 		patch.display.DrawPixel(i, 10, true);
 	}
-
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < NUM_APPLETS; i++) {
 		applets[i].draw();
 	}
-	
 	patch.display.Update();
+}
+
+void UpdateMidi() {
+	patch.midi.Listen();
+	if (patch.midi.HasEvents()) {
+		MidiEvent me = patch.midi.PopEvent();
+		if (me.type == ControlChange) {
+			ControlChangeEvent cce = me.AsControlChange();
+			last_chan = cce.value;
+		}
+	}
 }
 
 int main(void) {
 	patch.Init();
 
 	// set audio block size
-	patch.SetAudioBlockSize(1);
-	
+	patch.SetAudioBlockSize(128);
+
 	patch.StartAdc();
 	patch.StartAudio(AudioThrough);
+	patch.midi.StartReceive();
+	last_chan = 0;
 
 	sample_rate = patch.seed.AudioSampleRate();
 
 	selected = 0;
 	// init applets
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < NUM_APPLETS; i++) {
 		applets[i].position = i;
 		//applets[i].Init();
 	}
 
 	// load settings
 	//readModes();
-	
+
 	while(1) {
 		UpdateControls();
+		UpdateMidi();
 		UpdateOled();
 	}
 }
