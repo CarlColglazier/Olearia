@@ -1,6 +1,4 @@
 #include "daisy_patch.h"
-#include <string>
-#include <cstring>
 #include <math.h>
 
 // local includes
@@ -34,11 +32,6 @@ void UpdateControls() {
 	}
 
 	if (patch.encoder.Pressed()) {
-		// save?
-		if (patch.encoder.TimeHeldMs() > 2000.0f && patch.encoder.TimeHeldMs() < 2010.0f) {
-			//writeModes();
-			// disabled for now
-		}
 		// encoder
 		selected = (selected + patch.encoder.Increment()) % NUM_APPLETS;
 		if (selected < 0) {
@@ -67,21 +60,15 @@ static void AudioThrough(float **in, float **out, size_t size) {
 	for (int a = 0; a < NUM_APPLETS; a++) {
 		apphost[a]->gen->Control(controls[2 * a], controls[2 * a + 1]);
 		for (size_t i = 0; i < size; i++) {
-			float *o;
-			o = apphost[a]->gen->Process(in[2 * a][i], in[2 * a + 1][i]);
+			float *o = apphost[a]->gen->Process(in[2 * a][i], in[2 * a + 1][i]);
 			out[2 * a][i] = o[0];
 			out[2 * a + 1][i] = o[1];
-			//out[2 * a + 1][i] = applets[a].gen->Process();
 		}
 	}
 }
 
 void UpdateOled() {
 	patch.display.Fill(false);
-	//writeString(patch, 0, 0, "olearia");
-	for (int i = 0; i < 128; i++) {
-		patch.display.DrawPixel(i, 10, true);
-	}
 	for (int i = 0; i < NUM_APPLETS; i++) {
 		apphost[i]->draw(patch, selected);
 	}

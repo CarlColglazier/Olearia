@@ -11,7 +11,8 @@
 using namespace daisy;
 
 enum App { VCO, VCA, NOISE, NUM_ITEMS };
-const int SCREEN_WIDTH = 128;
+const int SCREEN_WIDTH = 100;//128;
+const int S_WIDTH =  36; //(SCREEN_WIDTH / 2);
 
 static uint32_t DSY_QSPI_BSS buff[BUFF_SIZE];
 //static uint32_t __attribute__((section(".dtcmram_bss"))) outbuff[BUFF_SIZE];
@@ -29,9 +30,13 @@ public:
 	int position;
 	App app;
 	Applet *gen;
+	int dr[S_WIDTH * S_WIDTH];
 	AppHost() {
 		position = 0;
 		app = App::VCO;
+		for (int i = 0; i < S_WIDTH * S_WIDTH; i++) {
+			dr[i] = 0;
+		}
 	}
 
 	void Init(float sample_rate) {
@@ -53,15 +58,26 @@ public:
 
 	void draw(DaisyPatch patch, int selected) {
 		int draw_width = SCREEN_WIDTH / NUM_APPLETS;
-
+		int left_offset = position * draw_width;
 		if (selected == position) {
-			for (int x = position * draw_width; x < (position + 1) * draw_width; x++) {
-				patch.display.DrawPixel(x, 30, true);
+			for (int x = left_offset; x < (position + 1) * draw_width; x++) {
+				patch.display.DrawPixel(x, 12, true);
 			}
 		}
 		const char *names[App::NUM_ITEMS] =
 			{ "FM VCO", "VCA", "NOISE" };
-		writeString(patch, position * draw_width, 18, names[app]);
+		writeString(patch, position * draw_width, 2, names[app]);
+		gen->Draw(dr, S_WIDTH, S_WIDTH);
+		for (int x = 0; x < S_WIDTH; x++) {
+			for (int y = 0; y < S_WIDTH; y++) {
+				if (dr[S_WIDTH * y + x] == 1) {
+					patch.display.DrawPixel(x + left_offset, y + 20, true);
+				} else {
+					patch.display.DrawPixel(x + left_offset, y + 20, false);
+				}
+			}
+		}
+		//delete dr;
 	}
 };
 

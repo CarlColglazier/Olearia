@@ -19,6 +19,21 @@ float* Amp::Process(float in_l, float in_r) {
 	return out;
 }
 
+void Amp::Draw(int *out, int width, int height) {
+	for (int x = 0; x < width; x++) {
+		for (int y = 0; y < height; y++) {
+			out [y * width + x] = 0;
+			if (x > 0 && x < width / 2 && y > (height - amp_l * height)) {
+				out[y * width + x] = 1;
+			}
+
+			if (x > width / 2 && y > (height - amp_r * height)) {
+				out[y * width + x] = 1;
+			}
+		}
+	}
+}
+
 // NOISE
 // ----------------------
 Noise::Noise(float sample_rate) {
@@ -35,6 +50,14 @@ float* Noise::Process(float in_l, float in_r) {
 	out[0] = v;
 	out[1] = v;
 	return out;
+}
+
+void Noise::Draw(int *out, int width, int height) {
+	for (int x = 0; x < width; x++) {
+		for (int y = 0; y < height; y++) {
+			out [y * width + x] = 0;
+		}
+	}
 }
 
 // OSC
@@ -71,4 +94,12 @@ float* Osc::Process(float in_l, float in_r) {
 	out[0] = mod_f;
 	out[1] = osc_two->Process();
 	return out;
+}
+
+void Osc::Draw(int *out, int width, int height) {
+	for (int x = 0; x < width; x++) {
+		for (int y = 0; y < height; y++) {
+			out [y * width + x] = 0;
+		}
+	}
 }
