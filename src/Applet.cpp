@@ -55,7 +55,11 @@ float* Noise::Process(float in_l, float in_r) {
 void Noise::Draw(int *out, int width, int height) {
 	for (int x = 0; x < width; x++) {
 		for (int y = 0; y < height; y++) {
-			out [y * width + x] = 0;
+			if (rand() % 2 == 0) {
+				out [y * width + x] = 0;
+			} else {
+				out [y * width + x] = 1;
+			}
 		}
 	}
 }
