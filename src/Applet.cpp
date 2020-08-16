@@ -26,7 +26,6 @@ void Amp::Draw(int *out, int width, int height) {
 			if (x > 0 && x < width / 2 && y > (height - amp_l * height)) {
 				out[y * width + x] = 1;
 			}
-
 			if (x > width / 2 && y > (height - amp_r * height)) {
 				out[y * width + x] = 1;
 			}
@@ -104,6 +103,45 @@ void Osc::Draw(int *out, int width, int height) {
 	for (int x = 0; x < width; x++) {
 		for (int y = 0; y < height; y++) {
 			out [y * width + x] = 0;
+		}
+	}
+}
+
+// Waveshaper
+// ----------------------
+Waveshaper::Waveshaper(float sample_rate) {
+	in_l = 0.0f;
+	in_r = 0.0f;
+}
+
+void Waveshaper::Control(float l, float r) {
+	in_l = l;
+	in_r = r;
+}
+
+float* Waveshaper::Process(float il, float ir) {
+	static float out[2];
+	float l = il * (in_l + 1.0) * 10;
+	float r = ir * (in_r + 1.0) * 10;
+	// from https://www.desmos.com/calculator/ge2wvg2wgj
+	// via https://www.kvraudio.com/forum/viewtopic.php?t=501471
+	// This is pretty basic and I will probably change it in the
+	// future to be more flexible.
+	out[0] = 4*(abs(0.25*l + 0.25 - round(0.25 * l + 0.25)) - 0.25);
+	out[1] = 4*(abs(0.25*r + 0.25 - round(0.25 * r + 0.25)) - 0.25);
+	return out;
+}
+
+void Waveshaper::Draw(int *out, int width, int height) {
+	for (int x = 0; x < width; x++) {
+		for (int y = 0; y < height; y++) {
+			out [y * width + x] = 0;
+			if (x > 0 && x < width / 2 && y > (height - in_l * height)) {
+				out[y * width + x] = 1;
+			}
+			if (x > width / 2 && y > (height - in_r * height)) {
+				out[y * width + x] = 1;
+			}
 		}
 	}
 }

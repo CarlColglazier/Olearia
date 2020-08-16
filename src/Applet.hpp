@@ -51,3 +51,13 @@ private:
 	Oscillator *osc_two;
 };
 
+class Waveshaper: public Applet {
+public:
+	Waveshaper(float sample_rate);
+	void Control(float in_l, float in_r);
+	float* Process(float l, float r);
+	void Draw(int *d, int width, int height);
+private:
+	float in_l, in_r;
+};
+
