@@ -54,7 +54,7 @@ public:
 			gen = new Waveshaper(sample_rate);
 			break;
 		case App::REVERB:
-			gen = new JCReverb(sample_rate);
+			gen = new JCReverb(sample_rate, position);
 			break;
 		default:
 			gen = new Amp(sample_rate);

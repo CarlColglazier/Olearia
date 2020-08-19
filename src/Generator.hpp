@@ -2,6 +2,12 @@
 #include <math.h>
 #include "daisy.h"
 
+#ifndef BUFF_
+#define BUFF_
+static float DSY_SDRAM_BSS sdbuff[1000000];
+static int next_free = 0;
+#endif
+
 class Oscillator {
 public:
 	Oscillator(float sr) {
@@ -28,128 +34,75 @@ private:
 	float sr_, sr_recip_, freq_, amp_, phase_, phase_inc_;
 };
 
-// https://llllllll.co/t/digital-allpass-filters/27398
-// https://ccrma.stanford.edu/~jos/pasp/Allpass_Filters.html
-// https://ccrma.stanford.edu/~jos/pasp/One_Multiply_Scattering_Junctions.html
-// https://github.com/madronalabs/madronalib/blob/master/source/DSP/MLDSPFilters.h (MIT)
-/*
-class AllPassFilter {
-public:
-	float mCoeffs;
-	//AllPassFilter(): mCoeffs(0.f){}
-	AllPassFilter(float a) {
-		//sr_ = sr;
-		mCoeffs = coeffs(a);
-	}
-	~AllPassFilter() {}
-	float coeffs(float d) {
-		float xm1 = (d - 1.f);
-		return -0.53f*xm1 + 0.24f*xm1*xm1;
-	}
-	float Process(float x) {
-		float y = x1 + (x - y1)*mCoeffs;
-		x1 = x;
-		y1 = y;
-		return y;
-	}
-private:
-	float x1{0}, y1{0};
-};
-*/
-
-class OnePole {
-public:
-	float a0, b1, y1;
-	OnePole(float omega) {
-		y1 = 0;
-		float x = expf(-omega*M_PI*2);
-		a0 = 1.f - x;
-		b1 = x;
-	}
-	float Process(float x) {
-		y1 = a0 * x + b1 * y1;
-		return y1;
-	}
-};
-
-
 
 // A comb filter is a delay which continuously adds
 // a past version of itself to a future version.
 class CombFilter {
 public:
-	CombFilter(float sample_rate, float gain, int samples, daisy::RingBuffer<float, 100000> *rbp) {
-		//fund_ = fund;
-		samples_ = samples;
+	CombFilter(float gain, int samples, float *buff_start) {
 		gain_ = gain;
-		sr_ = sample_rate;
-		rb = rbp;
-		rb->Init();
-		int delay = samples_;//(int) (sr_ / fund_);
-		if (delay > rb->writable()) {
-			delay = rb->writable();
-		}
-		for (int i = 0; i < delay; i++) {
-			rb->Overwrite(0.0f);
-		}
-	}
-	~CombFilter() {
-		//delete &rb;
-	}
-	float Process(float x) {
-		float out = rb->Read();
-		rb->Write(x + gain_ * out);
-		return out;
-	}
-private:
-	daisy::RingBuffer<float, 100000> *rb;
-	float gain_, sr_;
-	int samples_;
-};
-
-class DelayLine {
-public:
-	DelayLine(float fb, int samples) {
-		fb_ = fb;
 		samples_ = samples;
-		for (int i = 0; i < samples; i++) {
+		buff = buff_start;
+		for (int i = 0; i < 6000; i++) {
 			buff[i] = 0.0f;
 		}
 		read_pos = 0;
 		write_pos = samples;
 	}
-	~DelayLine() {}
+	~CombFilter() {}
 	float Process(float x) {
-		float feedback = fb_;
-		float read = buff[read_pos];
-		float delay_input = x + feedback * read;
-		write_pos = (read_pos + samples_) % 10000;
-		buff[write_pos] = delay_input;
-		// update pointers
-		read_pos = (read_pos + 1) % 10000;
-		return delay_input * feedback + read;
+		float out = buff[read_pos];
+		//float out = rb->Read();
+		float y = x + gain_ * out;
+		write_pos = (read_pos + samples_) % 6000;
+		buff[write_pos] = y;
+		read_pos = (read_pos + 1) % 6000;
+		return out;
 	}
 private:
-	float fb_;
-	float buff[10000];
+	float fb_, gain_;
+	float *buff;
+	int read_pos, write_pos, samples_;
+};
+
+class DelayLine {
+public:
+	DelayLine(int samples, float *buff_start) {
+		samples_ = samples;
+		buff = buff_start;
+		/*
+		for (int i = 0; i < 3000; i++) {
+			buff[i] = 0.0f;
+		}
+		*/
+		read_pos = 0;
+		write_pos = samples;
+	}
+	~DelayLine() {}
+	float Process(float x) {
+		float read = buff[read_pos];
+		write_pos = (read_pos + samples_) % 3000;
+		buff[write_pos] = x;
+		// update pointers
+		read_pos = (read_pos + 1) % 3000;
+		return read;
+	}
+private:
+	float *buff;
 	int read_pos, write_pos, samples_;
 };
 
 class AllPassFilter {
 public:
-	AllPassFilter(float sample_rate, float fb, int samples, daisy::RingBuffer<float, 100000> *rbp) {
-		d_ = samples;
-		sr_ = sample_rate;
-		rb = rbp;
+	AllPassFilter(float fb, int samples, float *buff_start) {
+		samples_ = samples;
 		fb_ = fb;
-		rb->Init();
-		int delay = d_;
-		if (delay > rb->writable()) {
-			delay = rb->writable();
+		buff = buff_start;
+		for (int i = 0; i < 2500; i++) {
+			buff[i] = 0.0f;
 		}
-		for (int i = 0; i < delay; i++) {
-			rb->Overwrite(0.0f);
-		}
+		read_pos = 0;
+		write_pos = samples;
 	}
 	~AllPassFilter() {}
 	// https://christianfloisand.wordpress.com/tag/all-pass-filter/
@@ -158,13 +111,14 @@ public:
 		//float g = 0.7f;
 		float feedback = fb_;
 		// https://github.com/djzielin/bucket-drums/blob/8a85cf389462aa78b477fb0a40fea599210b5e11/allpass_filter.cpp
-		float read = rb->ImmediateRead();
+		float read = buff[read_pos];
 		float delay_input = x - feedback * read;
-		rb->Write(delay_input);
+		write_pos = (read_pos + samples_) % 2500;
+		buff[write_pos] = delay_input;
 		return delay_input * feedback + read;
 	}
 private:
-	int d_, sr_;
+	int read_pos, write_pos, samples_;
 	float fb_;
-	daisy::RingBuffer<float, 100000> *rb;
+	float *buff;
 };

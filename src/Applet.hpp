@@ -6,17 +6,6 @@
 
 using namespace daisy;
 
-#ifndef DELAYS_
-#define DELAYS_
-static daisy::RingBuffer<float, 100000> DSY_SDRAM_BSS delay1;
-static daisy::RingBuffer<float, 100000> DSY_SDRAM_BSS delay2;
-static daisy::RingBuffer<float, 100000> DSY_SDRAM_BSS delay3;
-static daisy::RingBuffer<float, 100000> DSY_SDRAM_BSS delay4;
-static daisy::RingBuffer<float, 100000> DSY_SDRAM_BSS delay5;
-static daisy::RingBuffer<float, 100000> DSY_SDRAM_BSS delay6;
-static daisy::RingBuffer<float, 100000> DSY_SDRAM_BSS delay7;
-#endif
-
 class Applet {
 public:
 	virtual ~Applet() {};
@@ -74,23 +63,26 @@ private:
 
 class JCReverb: public Applet {
 public:
-	JCReverb(float sample_rate) {
+	JCReverb(float sample_rate, int position) {
 		sr_ = sample_rate;
-		dl1 = new DelayLine(0.3f, 1051);
-		dl2 = new DelayLine(0.3f, 337);
-		ap1 = new AllPassFilter(sample_rate, 0.7f, 1051, &delay1);
-		ap2 = new AllPassFilter(sample_rate, 0.7f, 337, &delay2);
-		ap3 = new AllPassFilter(sample_rate, 0.7f, 113, &delay3);
-		comb1 = new CombFilter(sample_rate, 0.742, 901, &delay4);
-		comb2 = new CombFilter(sample_rate, 0.733, 778, &delay5);
-		comb3 = new CombFilter(sample_rate, 0.715, 1011, &delay6);
-		comb4 = new CombFilter(sample_rate, 0.697, 1123, &delay7);
+		dl1 = new DelayLine(2208, &sdbuff[0 + 500000*position]);
+		dl2 = new DelayLine(2736, &sdbuff[10000 + 500000*position]);
+		dl3 = new DelayLine(1968, &sdbuff[20000 + 500000*position]);
+		dl4 = new DelayLine(2592, &sdbuff[30000 + 500000*position]);
+		ap1 = new AllPassFilter(0.7f, 1051, &sdbuff[40000 + 500000*position]);
+		ap2 = new AllPassFilter(0.7f, 337, &sdbuff[50000 + 500000*position]);
+		ap3 = new AllPassFilter(0.7f, 113, &sdbuff[60000 + 500000*position]);
+		comb1 = new CombFilter(0.742, 4799, &sdbuff[70000 + 500000*position]);
+		comb2 = new CombFilter(0.733, 4999, &sdbuff[80000 + 500000*position]);
+		comb3 = new CombFilter(0.715, 5399, &sdbuff[90000 + 500000*position]);
+		comb4 = new CombFilter(0.697, 5801, &sdbuff[100000 + 500000*position]);
 		wet_ = 0.5f;
-		//comb3 = new CombFilter(sample_rate, 0.715, 13.0f);
 	}
 	~JCReverb() {
 		delete dl1;
 		delete dl2;
+		delete dl3;
+		delete dl4;
 		delete ap1;
 		delete ap2;
 		delete ap3;
@@ -104,28 +96,16 @@ public:
 	}
 	void Process(float *in, float *out, size_t s) {
 		float ii = in[0];
-		/*
+
 		ii = ap1->Process(ii);
 		ii = ap2->Process(ii);
 		ii = ap3->Process(ii);
-		float o1 = comb1->Process(ii);
-		float o2 = comb2->Process(ii);
-		float o3 = comb3->Process(ii);
-		float o4 = comb4->Process(ii);
-		//ii = (o1 + o2 + o3 + o4) / 4.0f;
-		//
-		*/
-		ii = dl1->Process(ii);
-		ii = dl2->Process(ii);
-		float w = ii;//(o1 + o2 + o3 + o4) / 4.0f;
+		float o1 = dl1->Process(comb1->Process(ii));
+		float o2 = dl2->Process(comb2->Process(ii));
+		float o3 = dl3->Process(comb3->Process(ii));
+		float o4 = dl4->Process(comb4->Process(ii));
+		float w = (o1 + o2 + o3 + o4) / 4.0f;
 		float o = w * wet_ + (1 - wet_) * in[0];
-		/*
-		if (o > 1.0f) {
-			o = 1.0f;
-		}
-		if (o < -1.0f) {
-			o = -1.0f;
-			}*/
 		out[0] = o;
 		out[1] = 0.0f;
 	}
@@ -139,6 +119,8 @@ public:
 private:
 	DelayLine *dl1;
 	DelayLine *dl2;
+	DelayLine *dl3;
+	DelayLine *dl4;
 	AllPassFilter *ap1;
 	AllPassFilter *ap2;
 	AllPassFilter *ap3;
@@ -147,8 +129,5 @@ private:
 	CombFilter *comb3;
 	CombFilter *comb4;
 	float sr_, wet_;
-	//CombFilter *comb3;
-	//AllPassFilter* aps[3];
-	//OnePole op[4];
 };
 
