@@ -32,6 +32,7 @@ private:
 // https://ccrma.stanford.edu/~jos/pasp/Allpass_Filters.html
 // https://ccrma.stanford.edu/~jos/pasp/One_Multiply_Scattering_Junctions.html
 // https://github.com/madronalabs/madronalib/blob/master/source/DSP/MLDSPFilters.h (MIT)
+/*
 class AllPassFilter {
 public:
 	float mCoeffs;
@@ -54,6 +55,7 @@ public:
 private:
 	float x1{0}, y1{0};
 };
+*/
 
 class OnePole {
 public:
@@ -76,13 +78,17 @@ public:
 // a past version of itself to a future version.
 class CombFilter {
 public:
-	CombFilter(float sample_rate, float gain, float fund, daisy::RingBuffer<float, 48000> *rbp) {
-		fund_ = fund;
+	CombFilter(float sample_rate, float gain, int samples, daisy::RingBuffer<float, 100000> *rbp) {
+		//fund_ = fund;
+		samples_ = samples;
 		gain_ = gain;
 		sr_ = sample_rate;
 		rb = rbp;
 		rb->Init();
-		int delay = (int) (sr_ / fund_);
+		int delay = samples_;//(int) (sr_ / fund_);
+		if (delay > rb->writable()) {
+			delay = rb->writable();
+		}
 		for (int i = 0; i < delay; i++) {
 			rb->Overwrite(0.0f);
 		}
@@ -96,6 +102,69 @@ public:
 		return out;
 	}
 private:
-	daisy::RingBuffer<float, 48000> *rb;
-	float fund_, gain_, sr_;
+	daisy::RingBuffer<float, 100000> *rb;
+	float gain_, sr_;
+	int samples_;
+};
+
+class DelayLine {
+public:
+	DelayLine(float fb, int samples) {
+		fb_ = fb;
+		samples_ = samples;
+		for (int i = 0; i < samples; i++) {
+			buff[i] = 0.0f;
+		}
+		read_pos = 0;
+		write_pos = samples;
+	}
+	~DelayLine() {}
+	float Process(float x) {
+		float feedback = fb_;
+		float read = buff[read_pos];
+		float delay_input = x + feedback * read;
+		write_pos = (read_pos + samples_) % 10000;
+		buff[write_pos] = delay_input;
+		// update pointers
+		read_pos = (read_pos + 1) % 10000;
+		return delay_input * feedback + read;
+	}
+private:
+	float fb_;
+	float buff[10000];
+	int read_pos, write_pos, samples_;
+};
+
+class AllPassFilter {
+public:
+	AllPassFilter(float sample_rate, float fb, int samples, daisy::RingBuffer<float, 100000> *rbp) {
+		d_ = samples;
+		sr_ = sample_rate;
+		rb = rbp;
+		fb_ = fb;
+		rb->Init();
+		int delay = d_;
+		if (delay > rb->writable()) {
+			delay = rb->writable();
+		}
+		for (int i = 0; i < delay; i++) {
+			rb->Overwrite(0.0f);
+		}
+	}
+	~AllPassFilter() {}
+	// https://christianfloisand.wordpress.com/tag/all-pass-filter/
+	// https://dsp.stackexchange.com/questions/19998/allpass-filter-feedforward-feedback-design-and-code
+	float Process(float x) {
+		//float g = 0.7f;
+		float feedback = fb_;
+		// https://github.com/djzielin/bucket-drums/blob/8a85cf389462aa78b477fb0a40fea599210b5e11/allpass_filter.cpp
+		float read = rb->ImmediateRead();
+		float delay_input = x - feedback * read;
+		rb->Write(delay_input);
+		return delay_input * feedback + read;
+	}
+private:
+	int d_, sr_;
+	float fb_;
+	daisy::RingBuffer<float, 100000> *rb;
 };
