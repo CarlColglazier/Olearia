@@ -12,11 +12,9 @@ void Amp::Control(float in_l, float in_r) {
 	amp_r = in_r;
 }
 
-float* Amp::Process(float in_l, float in_r) {
-	static float out[2];
-	out[0] = in_l * amp_l;
-	out[1] = in_r * amp_r;
-	return out;
+void Amp::Process(float *in, float *out, size_t s) {
+	out[0] = in[0] * amp_l;
+	out[1] = in[1] * amp_r;
 }
 
 void Amp::Draw(int *out, int width, int height) {
@@ -43,12 +41,10 @@ void Noise::Control(float in_l, float in_r) {
 	amp_ = in_l;
 }
 
-float* Noise::Process(float in_l, float in_r) {
-	static float out[2];
+void Noise::Process(float *in, float *out, size_t s) {
 	float v = (rand() / (RAND_MAX + 1.)) * amp_;
 	out[0] = v;
 	out[1] = v;
-	return out;
 }
 
 void Noise::Draw(int *out, int width, int height) {
@@ -88,15 +84,13 @@ void Osc::Control(float in_l, float in_r) {
 	mod_index_ = in_r * 5000.0f;
 }
 
-float* Osc::Process(float in_l, float in_r) {
-	static float out[2];
+void Osc::Process(float *in, float *out, size_t s) {
 	// FM
 	osc_one->SetFreq(car_freq_);
 	float mod_f = osc_one->Process();
 	osc_two->SetFreq(mod_f * mod_index_ + car_freq_);
 	out[0] = mod_f;
 	out[1] = osc_two->Process();
-	return out;
 }
 
 void Osc::Draw(int *out, int width, int height) {
@@ -119,17 +113,17 @@ void Waveshaper::Control(float l, float r) {
 	in_r = r;
 }
 
-float* Waveshaper::Process(float il, float ir) {
-	static float out[2];
-	float l = il * (in_l + 1.0) * 10;
-	float r = ir * (in_r + 1.0) * 10;
+void Waveshaper::Process(float *in, float *out, size_t s) {
+	float l = in[0] * (in_l + 1.0) * 10;
+	float r = in[1] * (in_r + 1.0) * 10;
+	float p = (in_r * 0.5) + 0.25;
+	//float p = 0.25f;
 	// from https://www.desmos.com/calculator/ge2wvg2wgj
 	// via https://www.kvraudio.com/forum/viewtopic.php?t=501471
 	// This is pretty basic and I will probably change it in the
 	// future to be more flexible.
-	out[0] = 4*(abs(0.25*l + 0.25 - round(0.25 * l + 0.25)) - 0.25);
+	out[0] = 4*(abs(p*l + p - round(p * l + p)) - p);
 	out[1] = 4*(abs(0.25*r + 0.25 - round(0.25 * r + 0.25)) - 0.25);
-	return out;
 }
 
 void Waveshaper::Draw(int *out, int width, int height) {

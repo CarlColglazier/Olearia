@@ -60,7 +60,11 @@ static void AudioThrough(float **in, float **out, size_t size) {
 	for (int a = 0; a < NUM_APPLETS; a++) {
 		apphost[a]->gen->Control(controls[2 * a], controls[2 * a + 1]);
 		for (size_t i = 0; i < size; i++) {
-			float *o = apphost[a]->gen->Process(in[2 * a][i], in[2 * a + 1][i]);
+			float ii[2];
+			float o[2];
+			ii[0] = in[2 * a][i];
+			ii[1] = in[2 * a + 1][i];
+			apphost[a]->gen->Process(ii, o, 2);
 			out[2 * a][i] = o[0];
 			out[2 * a + 1][i] = o[1];
 		}
@@ -90,7 +94,7 @@ int main(void) {
 	patch.Init();
 
 	// set audio block size
-	patch.SetAudioBlockSize(128);
+	patch.SetAudioBlockSize(256);
 
 	patch.StartAdc();
 	patch.StartAudio(AudioThrough);
@@ -99,10 +103,14 @@ int main(void) {
 
 	sample_rate = patch.seed.AudioSampleRate();
 
+	//delay1 = daisy::RingBuffer<float, 48000>();
+	//delay2 = daisy::RingBuffer<float, 48000>();
+	//delay3 = daisy::RingBuffer<float, 48000>();
+
 	selected = 0;
 	// init applets
 	for (int i = 0; i < NUM_APPLETS; i++) {
-		apphost[i] = new AppHost();
+		apphost[i] = new AppHost(App::REVERB);
 		apphost[i]->position = i;
 		apphost[i]->Init(sample_rate);
 	}

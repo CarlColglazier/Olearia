@@ -10,7 +10,7 @@
 
 using namespace daisy;
 
-enum App { VCO, VCA, NOISE, WAVESHAPER, NUM_ITEMS };
+enum App { REVERB, VCO, VCA, NOISE, WAVESHAPER, NUM_ITEMS };
 const int SCREEN_WIDTH = 100;//128;
 const int S_WIDTH =  36; //(SCREEN_WIDTH / 2);
 
@@ -31,9 +31,9 @@ public:
 	App app;
 	Applet *gen;
 	int dr[S_WIDTH * S_WIDTH];
-	AppHost() {
+	AppHost(App def) {
 		position = 0;
-		app = App::VCO;
+		app = def;
 		for (int i = 0; i < S_WIDTH * S_WIDTH; i++) {
 			dr[i] = 0;
 		}
@@ -53,6 +53,9 @@ public:
 		case App::WAVESHAPER:
 			gen = new Waveshaper(sample_rate);
 			break;
+		case App::REVERB:
+			gen = new JCReverb(sample_rate);
+			break;
 		default:
 			gen = new Amp(sample_rate);
 			break;
@@ -68,7 +71,7 @@ public:
 			}
 		}
 		const char *names[App::NUM_ITEMS] =
-			{ "FM VCO", "VCA", "NOISE", "WVSHPR" };
+			{ "REVERB", "FM VCO", "VCA", "NOISE", "WVSHPR" };
 		writeString(patch, position * draw_width, 2, names[app]);
 		gen->Draw(dr, S_WIDTH, S_WIDTH);
 		for (int x = 0; x < S_WIDTH; x++) {
