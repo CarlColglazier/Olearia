@@ -19,6 +19,7 @@ int selected;
 float sample_rate;
 float controls[4];
 int last_chan;
+int wait;
 
 AppHost *apphost[NUM_APPLETS];
 
@@ -47,15 +48,20 @@ void UpdateControls() {
 		}
 		// switch?
 		if (apphost[selected]->app != (App) a) {
-			delete apphost[selected]->gen;
-			apphost[selected]->app = (App) a;
-			apphost[selected]->Init(sample_rate);
+			wait = 10;
+			apphost[selected]->Init((App) a, sample_rate);
 		}
 	}
 }
 
 // AUDIO PROCESSOR
 static void AudioThrough(float **in, float **out, size_t size) {
+	// Some things take a little bit of time to load.
+	// This avoids a runtime error, which is a huge headache!
+	if (wait > 0) {
+		wait--;
+		return;
+	}
 	// audio stuff here
 	for (int a = 0; a < NUM_APPLETS; a++) {
 		apphost[a]->gen->Control(controls[2 * a], controls[2 * a + 1]);
@@ -103,16 +109,13 @@ int main(void) {
 
 	sample_rate = patch.seed.AudioSampleRate();
 
-	//delay1 = daisy::RingBuffer<float, 48000>();
-	//delay2 = daisy::RingBuffer<float, 48000>();
-	//delay3 = daisy::RingBuffer<float, 48000>();
-
 	selected = 0;
+	wait = 0;
 	// init applets
 	for (int i = 0; i < NUM_APPLETS; i++) {
-		apphost[i] = new AppHost(App::REVERB);
+		apphost[i] = new AppHost();
 		apphost[i]->position = i;
-		apphost[i]->Init(sample_rate);
+		apphost[i]->Init(App::VCO, sample_rate);
 	}
 
 	// load settings

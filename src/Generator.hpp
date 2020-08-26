@@ -2,12 +2,6 @@
 #include <math.h>
 #include "daisy.h"
 
-#ifndef BUFF_
-#define BUFF_
-static float DSY_SDRAM_BSS sdbuff[1000000];
-static int next_free = 0;
-#endif
-
 class Oscillator {
 public:
 	Oscillator(float sr) {
@@ -43,9 +37,11 @@ public:
 		gain_ = gain;
 		samples_ = samples;
 		buff = buff_start;
+		/*
 		for (int i = 0; i < 6000; i++) {
 			buff[i] = 0.0f;
 		}
+		*/
 		read_pos = 0;
 		write_pos = samples;
 	}
@@ -60,7 +56,7 @@ public:
 		return out;
 	}
 private:
-	float fb_, gain_;
+	float gain_;
 	float *buff;
 	int read_pos, write_pos, samples_;
 };

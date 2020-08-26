@@ -4,6 +4,12 @@
 #include <math.h>
 #include "Generator.hpp"
 
+#ifndef BUFF_
+#define BUFF_
+static float DSY_SDRAM_BSS sdbuff[1000000];
+//static int next_free = 0;
+#endif
+
 using namespace daisy;
 
 class Applet {
@@ -96,7 +102,6 @@ public:
 	}
 	void Process(float *in, float *out, size_t s) {
 		float ii = in[0];
-
 		ii = ap1->Process(ii);
 		ii = ap2->Process(ii);
 		ii = ap3->Process(ii);

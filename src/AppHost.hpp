@@ -10,7 +10,7 @@
 
 using namespace daisy;
 
-enum App { REVERB, VCO, VCA, NOISE, WAVESHAPER, NUM_ITEMS };
+enum App { VCO, REVERB, VCA, NOISE, WAVESHAPER, NUM_ITEMS };
 const int SCREEN_WIDTH = 100;//128;
 const int S_WIDTH =  36; //(SCREEN_WIDTH / 2);
 
@@ -31,15 +31,20 @@ public:
 	App app;
 	Applet *gen;
 	int dr[S_WIDTH * S_WIDTH];
-	AppHost(App def) {
+	AppHost() {
+		gen = NULL;
 		position = 0;
-		app = def;
+		//app = def;
 		for (int i = 0; i < S_WIDTH * S_WIDTH; i++) {
 			dr[i] = 0;
 		}
 	}
 
-	void Init(float sample_rate) {
+	void Init(App a, float sample_rate) {
+		if (gen) {
+			delete gen;
+		}
+		app = a;
 		switch (app) {
 		case App::VCA:
 			gen = new Amp(sample_rate);
@@ -71,8 +76,12 @@ public:
 			}
 		}
 		const char *names[App::NUM_ITEMS] =
-			{ "REVERB", "FM VCO", "VCA", "NOISE", "WVSHPR" };
+			{ "FM VCO", "JCVERB", "VCA", "NOISE", "WVSHPR" };
 		writeString(patch, position * draw_width, 2, names[app]);
+		if (app == App::REVERB) {
+			// There seems to be a bug here?
+			return;
+		}
 		gen->Draw(dr, S_WIDTH, S_WIDTH);
 		for (int x = 0; x < S_WIDTH; x++) {
 			for (int y = 0; y < S_WIDTH; y++) {
