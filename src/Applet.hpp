@@ -64,7 +64,7 @@ public:
 	void Process(float *in, float *out, size_t s);
 	void Draw(int *d, int width, int height);
 private:
-	float in_l, in_r;
+	float in_l, in_r, sr_;
 };
 
 class JCReverb: public Applet {

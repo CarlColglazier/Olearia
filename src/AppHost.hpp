@@ -71,9 +71,7 @@ public:
 		int draw_width = SCREEN_WIDTH / NUM_APPLETS;
 		int left_offset = position * draw_width;
 		if (selected == position) {
-			for (int x = left_offset; x < (position + 1) * draw_width; x++) {
-				patch.display.DrawPixel(x, 12, true);
-			}
+			patch.display.DrawLine(left_offset, 12, (position + 1) * draw_width, 12, true);
 		}
 		const char *names[App::NUM_ITEMS] =
 			{ "FM VCO", "JCVERB", "VCA", "NOISE", "WVSHPR" };

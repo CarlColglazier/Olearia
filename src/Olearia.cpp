@@ -1,5 +1,6 @@
 #include "daisy_patch.h"
 #include <math.h>
+#include <string>
 
 // local includes
 #ifndef APPLET_
@@ -22,6 +23,7 @@ int last_chan;
 int wait;
 
 AppHost *apphost[NUM_APPLETS];
+int counter;
 
 void UpdateControls() {
 	// just pass along the values
@@ -33,6 +35,8 @@ void UpdateControls() {
 	}
 
 	if (patch.encoder.Pressed()) {
+		// wake up
+		counter = 0;
 		// encoder
 		selected = (selected + patch.encoder.Increment()) % NUM_APPLETS;
 		if (selected < 0) {
@@ -79,10 +83,18 @@ static void AudioThrough(float **in, float **out, size_t size) {
 
 void UpdateOled() {
 	patch.display.Fill(false);
+	// screensaver
+	if (counter > 10000) {
+		patch.display.Update();
+		return;
+	}
 	for (int i = 0; i < NUM_APPLETS; i++) {
 		apphost[i]->draw(patch, selected);
 	}
+	writeString(patch, 100, 20, std::to_string(counter));
+
 	patch.display.Update();
+	counter++;
 }
 
 void UpdateMidi() {
@@ -111,6 +123,7 @@ int main(void) {
 
 	selected = 0;
 	wait = 0;
+	counter = 0;
 	// init applets
 	for (int i = 0; i < NUM_APPLETS; i++) {
 		apphost[i] = new AppHost();

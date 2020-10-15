@@ -75,11 +75,17 @@ Osc::~Osc() {
 }
 
 float v_to_freq(float v) {
-	return (16.352 * 4) * powf(2.0, abs(v) * 5);
+	// C3 is the base note.
+	float volts = 5.0f * v;
+	float midi_note = volts * 12.0f + 48.0f;
+	return (440.0f) * powf(2.0, (midi_note - 69.0f) / 12.0f);
 }
 
 void Osc::Control(float in_l, float in_r) {
-	car_freq_ = v_to_freq(in_l);
+	// quantize.
+	int il = (int) (in_l * 60.0f);
+	float il_f = ((float) il) / 60.0f;
+	car_freq_ = v_to_freq(il_f);
 	//mod_freq_ = v_to_freq(in_r);
 	mod_index_ = in_r * 5000.0f;
 }
@@ -90,7 +96,7 @@ void Osc::Process(float *in, float *out, size_t s) {
 	float mod_f = osc_one->Process();
 	osc_two->SetFreq(mod_f * mod_index_ + car_freq_);
 	out[0] = mod_f;
-	out[1] = osc_two->Process();
+	out[1] = osc_two->Process() * 0.5f; // amp at the end.
 }
 
 void Osc::Draw(int *out, int width, int height) {
@@ -106,6 +112,7 @@ void Osc::Draw(int *out, int width, int height) {
 Waveshaper::Waveshaper(float sample_rate) {
 	in_l = 0.0f;
 	in_r = 0.0f;
+	sr_ = sample_rate;
 }
 
 void Waveshaper::Control(float l, float r) {
@@ -117,7 +124,6 @@ void Waveshaper::Process(float *in, float *out, size_t s) {
 	float l = in[0] * (in_l + 1.0) * 10;
 	float r = in[1] * (in_r + 1.0) * 10;
 	float p = (in_r * 0.5) + 0.25;
-	//float p = 0.25f;
 	// from https://www.desmos.com/calculator/ge2wvg2wgj
 	// via https://www.kvraudio.com/forum/viewtopic.php?t=501471
 	// This is pretty basic and I will probably change it in the
