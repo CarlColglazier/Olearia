@@ -27,8 +27,7 @@ int counter;
 
 void UpdateControls() {
 	// just pass along the values
-	patch.UpdateAnalogControls();
-	patch.DebounceControls();
+	patch.ProcessAllControls();
 
 	for (int i = 0; i < 4; i++) {
 		controls[i] = patch.controls[i].Process();
@@ -59,7 +58,7 @@ void UpdateControls() {
 }
 
 // AUDIO PROCESSOR
-static void AudioThrough(float **in, float **out, size_t size) {
+static void AudioThrough(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
 	// Some things take a little bit of time to load.
 	// This avoids a runtime error, which is a huge headache!
 	if (wait > 0) {

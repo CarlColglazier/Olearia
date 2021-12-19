@@ -14,7 +14,8 @@ enum App { VCO, REVERB, VCA, NOISE, WAVESHAPER, NUM_ITEMS };
 const int SCREEN_WIDTH = 100;//128;
 const int S_WIDTH =  36; //(SCREEN_WIDTH / 2);
 
-static uint32_t DSY_QSPI_BSS buff[BUFF_SIZE];
+// static uint32_t DSY_QSPI_BSS buff[BUFF_SIZE];
+// Not used?
 //static uint32_t __attribute__((section(".dtcmram_bss"))) outbuff[BUFF_SIZE];
 //static uint32_t  axi_outbuff[BUFF_SIZE];
 uint32_t inbuff[BUFF_SIZE];
@@ -95,6 +96,8 @@ public:
 };
 
 /* persist settings */
+// Not working with libDaisy v4.0.0
+/*
 void writeModes(DaisyPatch patch, AppHost *apphost) {
 	patch.seed.qspi_handle.mode = DSY_QSPI_MODE_INDIRECT_POLLING;
 	dsy_qspi_init(&patch.seed.qspi_handle);
@@ -116,3 +119,4 @@ void readModes(DaisyPatch patch) {
 	}
 	dsy_qspi_deinit();
 }
+*/
