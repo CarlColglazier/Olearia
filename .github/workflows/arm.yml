@@ -17,8 +17,8 @@ jobs:
       uses: fiam/arm-none-eabi-gcc@v1
       with:
         release: '9-2019-q4'
-    - name: make daisy
-      run: make daisy
+    #- name: make daisy
+    #  run: make daisy
     - name: make
       run: make
     - name: Archive
