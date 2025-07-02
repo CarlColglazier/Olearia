@@ -12,14 +12,21 @@ All outputs direct through the audio outs.
 
 ## Development
 
-To get this set up on a new system, I found I had to build libDaisy separately first:
+
+The repository includes libDaisy and DaisySP as submodules. Keep this in mind when cloning:
 
 ```
 git clone <URL>
 git submodule update --init
-cd lib/libDaisy
-make
-cd ../..
 make
 ```
 
+## Development Environment
+
+I personally [use](https://carlcolglazier.com/tools/) an M1 MacBook
+and have found it is simplest to use containers to actually build
+the binary.
+
+``` sh
+docker build --platform linux/amd64 --tag olearia --file Dockerfile .
+```
