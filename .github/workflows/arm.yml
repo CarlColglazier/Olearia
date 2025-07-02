@@ -13,12 +13,13 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-
     - name: Install xPack ARM GCC
       run: |
-        wget https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v10.2.1-1.1/xpack-arm-none-eabi-gcc-10.2.1-1.1-linux-x64.tar.gz
-        tar -xf xpack-arm-none-eabi-gcc-10.2.1-1.1-linux-x64.tar.gz
-        echo "${GITHUB_WORKSPACE}/xpack-arm-none-eabi-gcc-10.2.1-1.1/bin" >> $GITHUB_PATH
+        wget https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v10.3.1-2.1/xpack-arm-none-eabi-gcc-10.3.1-2.1-linux-x64.tar.gz
+        tar -xf xpack-arm-none-eabi-gcc-10.3.1-2.1-linux-x64.tar.gz
+        echo "${GITHUB_WORKSPACE}/xpack-arm-none-eabi-gcc-10.3.1-2.1/bin" >> $GITHUB_PATH
+    - name: make-libs
+      run: make libs
     - name: make
       run: make
     - name: Archive

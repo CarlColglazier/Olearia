@@ -5,5 +5,11 @@ CPP_SOURCES = $(wildcard $(SRC_DIR)/*cpp)
 
 LIBDAISY_DIR = ./lib/libDaisy
 DAISYSP_DIR = ./lib/DaisySP
+DAISYSP_LGPL_DIR = $(DAISYSP_DIR)/DaisySP-LGPL
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
+
+libs:
+	$(MAKE) -C $(LIBDAISY_DIR)
+	$(MAKE) -C $(DAISYSP_DIR)
+	$(MAKE) -C $(DAISYSP_LGPL_DIR)
